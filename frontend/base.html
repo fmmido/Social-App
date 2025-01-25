@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Twitter-like Layout{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('serve_frontend', filename='styles.css') }}">
+    <style>
+        /* --- Add these NEW CSS rules for Tweet Layout to your existing <style> block in base.html --- */
+        /* Tweet Style */
+        .tweet {
+            border-bottom: 1px solid #e1e8ed;
+            padding: 10px 0;
+            display: flex; /* Use flexbox for tweet layout */
+            gap: 10px; /* Spacing between profile pic and content */
+        }
+
+        .tweet:last-child {
+            border-bottom: none;
+        }
+
+        .tweet-profile-pic {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+        }
+
+        .tweet-content {
+            flex-grow: 1; /* Allow content to take remaining space */
+        }
+
+        .tweet-header {
+            display: flex;
+            align-items: baseline; /* Align username and handle */
+            gap: 5px; /* Spacing between username and handle */
+            margin-bottom: 5px;
+        }
+
+        .tweet-username {
+            font-weight: bold;
+        }
+
+        .tweet-handle {
+            color: #657786;
+        }
+
+        /* Tweet content */
+        .tweet-content {
+            margin-bottom: 12px;
+        }
+
+        /* Tweet footer */
+        .tweet-footer {
+            display: flex;
+            gap: 16px;
+            color: #657786;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="navbar-left">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/6/6f/Logo_of_Twitter.svg" alt="Twitter Logo" class="navbar-logo">
+            <span class="nav-icon">🏠</span>
+            <span class="nav-icon">🔍</span>
+            <span class="nav-icon">🔔</span>
+            <span class="nav-icon">✉️</span>
+        </div>
+        <div class="navbar-right" id="navbar-right">
+            <!-- User Login Form in Navbar (Initially shown if not logged in) -->
+            <div id="nav-login-form">
+                <form id="login-form">
+                    <input type="text" id="nav-username" placeholder="Username" class="nav-input-field" autocomplete="username">
+                    <input type="password" id="nav-password" placeholder="Password" class="nav-input-field" autocomplete="current-password">
+                    <button type="submit" id="nav-login-button" class="tweet-button nav-btn">Login</button>
+                    <button type="button" id="nav-register-button" class="tweet-button nav-btn">Register</button>
+                </form>
+            </div>
+            <!-- User Info/Logout (Initially hidden, shown after login) -->
+            <div id="user-info" style="display:none;">
+                <span id="logged-in-username"></span>
+                <button id="nav-logout-button" class="tweet-button nav-btn">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Layout Container - will be closed in base.html -->
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <h3>Menu</h3>
+            <ul>
+                <li>Home</li>
+                <li>Explore</li>
+                <li>Notifications</li>
+                <li>Messages</li>
+                <li id="profile-link">Profile</li>
+            </ul>
+        </div>
+
+        <!-- Content Block - index.html will insert content here -->
+        {% block content %}
+        {% endblock %}
+
+    </div> <!-- Close Container from base.html -->
+
+    <!-- Footer -->
+    <footer>
+        <p>© 2023 Simple Twitter-like Layout</p>
+    </footer>
+
+    <script>
+        const navbarRight = document.getElementById('navbar-right');
+        const navLoginForm = document.getElementById('nav-login-form');
+        const userInfoDisplay = document.getElementById('user-info');
+        const loggedInUsernameSpan = document.getElementById('logged-in-username');
+
+        let currentUserId = null; // Store current user ID globally
+
+        // Function to update navbar based on login status
+        function updateNavbarLoginStatus(isLoggedIn, username = null, userId = null) {
+            currentUserId = isLoggedIn ? userId : null; // Update global user ID
+            if (isLoggedIn) {
+                navLoginForm.style.display = 'none';
+                userInfoDisplay.style.display = 'flex';
+                loggedInUsernameSpan.textContent = username || 'Logged In';
+            } else {
+                navLoginForm.style.display = 'block';
+                userInfoDisplay.style.display = 'none';
+                loggedInUsernameSpan.textContent = '';
+            }
+        }
+
+        // Check current user on page load
+        function checkCurrentUser() {
+            fetch('/api/current_user')
+            .then(response => response.json())
+            .then(data => {
+                if (data.userId) {
+                    updateNavbarLoginStatus(true, data.username, data.userId);
+                } else {
+                    updateNavbarLoginStatus(false);
+                }
+            })
+            .catch(error => {
+                console.error('Error checking current user:', error);
+                updateNavbarLoginStatus(false);
+            });
+        }
+
+        checkCurrentUser(); // Call checkCurrentUser on base.html load - will run on every page
+
+        document.getElementById('login-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const username = document.getElementById('nav-username').value;
+            const password = document.getElementById('nav-password').value;
+
+            fetch('/api/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username: username, password: password })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(errorData => {
+                        return Promise.reject(errorData);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Login successful:', data);
+                alert('Login Successful!');
+                localStorage.setItem('userId', data.userId);
+                updateNavbarLoginStatus(true, username, data.userId);
+            })
+            .catch(error => {
+                console.error('Login failed:', error);
+                let errorMessage = 'Login Failed. Check console for details.';
+                if (error && error.error) {
+                    errorMessage = 'Login Failed: ' + error.error;
+                }
+                alert(errorMessage);
+            });
+        });
+
+        document.getElementById('nav-register-button').addEventListener('click', function(event) {
+            event.preventDefault();
+
+            const username = document.getElementById('nav-username').value;
+            const password = document.getElementById('nav-password').value;
+
+            fetch('/api/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username: username, password: password })
+            })
+            .then(response => {
+                if (!response.ok && response.status !== 201) {
+                    return response.json().then(errorData => {
+                        return Promise.reject(errorData);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Registration successful:', data);
+                alert('Registration Successful! User ID: ' + data.userId);
+            })
+            .catch(error => {
+                console.error('Registration failed:', error);
+                let errorMessage = 'Registration Failed. Check console.';
+                if (error && error.error) {
+                    errorMessage = 'Registration Failed: ' + error.error;
+                }
+                alert(errorMessage);
+            });
+        });
+
+        document.getElementById('nav-logout-button').addEventListener('click', function() {
+            fetch('/api/logout', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Logout successful:', data);
+                localStorage.removeItem('userId');
+                updateNavbarLoginStatus(false);
+                alert('Logout Successful!');
+            })
+            .catch(error => {
+                console.error('Error during logout:', error);
+                alert('Error during logout. Check console.');
+            });
+        });
+
+        const profileLink = document.getElementById('profile-link'); // Get profile link element
+
+        // Update Profile link href to logged-in user's profile
+        function updateProfileLink(username) {
+            if (username) {
+                profileLink.innerHTML = `<a href="/profile/${username}">Profile</a>`; // Set link dynamically
+            } else {
+                profileLink.innerHTML = `Profile`; // No link for guests
+            }
+        }
+
+        // Check current user on page load
+        checkCurrentUser();
+    </script>
+
+</body>
+</html>

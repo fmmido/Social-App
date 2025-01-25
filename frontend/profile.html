@@ -1,0 +1,312 @@
+
+{% extends 'base.html' %}
+
+{% block title %}User Profile - {% if user_profile %}{{ user_profile.username }}{% endif %}{% endblock %}
+
+{% block content %}
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Tweet Input Area (Hidden for guests, shown for logged-in users) -->
+        <div id="tweet-area" style="display:none;">
+            <textarea id="tweet-input" placeholder="What's happening?" rows="3"></textarea>
+            <button id="tweet-submit-button" class="tweet-button">Tweet</button>
+        </div>
+        
+    <!-- Main Content - Profile Page Specific Content -->
+    <div class="main-content">
+        <div id="profile-container">
+            <p>Loading profile...</p>
+        </div>
+
+        <!-- Forms for updating username, password, and profile picture -->
+        <div id="update-forms" style="display: none;">
+            <!-- Update Username Form -->
+            <form id="update-username-form">
+                <h3>Update Username</h3>
+                <input type="text" id="new-username" placeholder="New Username" required>
+                <button type="submit" class="tweet-button">Update Username</button>
+                <div id="username-update-status"></div>
+            </form>
+
+            <!-- Update Password Form -->
+            <form id="update-password-form">
+                <h3>Update Password</h3>
+                <input type="hidden" name="username" id="hidden-username-for-password-form"> <!-- Hidden username field for accessibility -->
+                <input type="password" id="new-password" placeholder="New Password" required autocomplete="new-password">
+                <button type="submit" class="tweet-button">Update Password</button>
+                <div id="password-update-status"></div>
+            </form>
+
+            <!-- Upload Profile Picture Form -->
+            <form id="profile-pic-upload-form">
+                <h3>Upload Profile Picture</h3>
+                <input type="file" id="profile-pic-file" name="profile_pic" accept="image/*" required>
+                <button type="submit" class="tweet-button">Upload Profile Picture</button>
+                <div id="upload-status-message"></div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const profileContainer = document.getElementById('profile-container');
+        const updateForms = document.getElementById('update-forms');
+        let viewingProfileUsername = null; // Track username of profile being viewed
+        let currentUserId = null; // Track logged-in user's ID
+
+        // Function to load user profile data and display profile page content
+        function loadProfilePage() {
+            const path = window.location.pathname;
+            if (path.startsWith('/profile/')) {
+                const username = path.substring('/profile/'.length);
+                viewingProfileUsername = username;
+                loadUserProfile(username);
+            } else {
+                // If not on a profile page, redirect to timeline or handle as needed
+                window.location.href = '/'; // Redirect to homepage if not on /profile/ page
+            }
+        }
+
+        // Function to load user profile data and posts
+        function loadUserProfile(username) {
+            fetch(`/api/user_profile/${username}`)
+                .then(response => response.json())
+                .then(userProfile => {
+                    displayUserProfile(userProfile);
+                    // Show update forms if the profile belongs to the logged-in user
+                    if (currentUserId === userProfile.id) {
+                        updateForms.style.display = 'block';
+                    } else {
+                        updateForms.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading user profile:', error);
+                    profileContainer.innerHTML = '<p>Failed to load user profile.</p>';
+                });
+        }
+
+        // Function to display user profile information
+        function displayUserProfile(userProfile) {
+            profileContainer.innerHTML = ''; // Clear container
+            document.title = `@${userProfile.username} - Profile`; // Update page title
+
+            // Profile Header
+            const profileHeader = document.createElement('div');
+            profileHeader.innerHTML = `
+                <h2>@${userProfile.username}</h2>
+                <img src="${userProfile.profile_pic || '{{ url_for('static', filename='images/default_profile_pic.png') }}'}" alt="Profile Picture" style="width: 80px; height: 80px; border-radius: 50%;">
+                <p><strong>Username:</strong> ${userProfile.username}</p>
+                <h3>Tweets</h3>
+            `;
+            profileContainer.appendChild(profileHeader);
+
+            // Container for User's Tweets
+            const userTweetsContainer = document.createElement('div');
+            userTweetsContainer.id = 'user-tweets-container';
+            profileContainer.appendChild(userTweetsContainer);
+
+            if (userProfile.posts && userProfile.posts.length > 0) {
+                displayProfileTweets(userProfile.posts, userTweetsContainer); // Display user's tweets
+            } else {
+                userTweetsContainer.innerHTML = '<p>No tweets from this user yet.</p>';
+            }
+            setHiddenUsername(); // Set hidden username for password form accessibility
+        }
+
+        // Function to display user's tweets on profile page
+        function displayProfileTweets(posts, container) {
+            container.innerHTML = ''; // Clear tweet container
+            if (!posts || posts.length === 0) {
+                container.innerHTML = '<p>No tweets available for this user.</p>';
+                return;
+            }
+            posts.forEach(post => {
+                const postDiv = document.createElement('div');
+                postDiv.classList.add('tweet'); // Add tweet class for styling
+                postDiv.innerHTML = `
+                    <img src="${post.profile_pic || '{{ url_for('static', filename='images/default_profile_pic.png') }}'}" alt="Profile Picture" class="tweet-profile-pic">
+                    <div class="tweet-content">
+                        <div class="tweet-header">
+                            <span class="tweet-username">
+                                <a href="/profile/${post.username}">${post.username}</a>
+                            </span>
+                            <span class="tweet-handle">@${post.username}</span>
+                        </div>
+                        <p>${post.content}</p>
+                        <div class="tweet-footer">
+                            <span class="likes">❤️ 0</span>
+                            <span class="retweets">🔁 0</span>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(postDiv);
+            });
+        }
+
+        // Function to handle profile picture upload
+        function setupProfilePicUploadHandler() {
+            const uploadForm = document.getElementById('profile-pic-upload-form');
+            const statusMessageDiv = document.getElementById('upload-status-message');
+
+            uploadForm.addEventListener('submit', function (event) {
+                event.preventDefault(); // Prevent default form submission
+
+                const fileInput = document.getElementById('profile-pic-file');
+                const file = fileInput.files[0];
+
+                if (!file) {
+                    statusMessageDiv.textContent = 'Please select a file.';
+                    statusMessageDiv.className = 'error-message';
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('profile_pic', file);
+
+                fetch('/api/upload_profile_pic', {
+                    method: 'POST',
+                    body: formData,
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.text().then(text => {
+                                throw new Error(text || 'Upload failed');
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        statusMessageDiv.textContent = data.message;
+                        statusMessageDiv.className = 'success-message';
+                        // Update the profile picture display
+                        const profilePicElement = document.querySelector('.tweet-profile-pic');
+                        if (profilePicElement) {
+                            profilePicElement.src = data.profilePicUrl + '?t=' + new Date().getTime(); // Add timestamp to force refresh
+                        }
+                        loadUserProfile(viewingProfileUsername); // Reload profile to update picture
+                    })
+                    .catch(error => {
+                        statusMessageDiv.textContent = 'Error during upload: ' + error.message;
+                        statusMessageDiv.className = 'error-message';
+                        console.error('Error during profile pic upload:', error);
+                    });
+            });
+        }
+
+        // Function to handle username update
+        function setupUsernameUpdateHandler() {
+            const updateUsernameForm = document.getElementById('update-username-form');
+            const statusMessageDiv = document.getElementById('username-update-status');
+
+            updateUsernameForm.addEventListener('submit', function (event) {
+                event.preventDefault(); // Prevent default form submission
+
+                const newUsername = document.getElementById('new-username').value;
+
+                if (!newUsername.trim()) {
+                    statusMessageDiv.textContent = 'Username cannot be empty.';
+                    statusMessageDiv.className = 'error-message';
+                    return;
+                }
+
+                fetch('/api/edit_username', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ new_username: newUsername }),
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.json().then(errorData => {
+                                throw new Error(errorData.error || 'Update failed');
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        statusMessageDiv.textContent = data.message;
+                        statusMessageDiv.className = 'success-message';
+                        loadUserProfile(newUsername); // Reload profile with new username
+                    })
+                    .catch(error => {
+                        statusMessageDiv.textContent = 'Error during update: ' + error.message;
+                        statusMessageDiv.className = 'error-message';
+                        console.error('Error during username update:', error);
+                    });
+            });
+        }
+
+        // Function to handle password update
+        function setupPasswordUpdateHandler() {
+            const updatePasswordForm = document.getElementById('update-password-form');
+            const statusMessageDiv = document.getElementById('password-update-status');
+
+            updatePasswordForm.addEventListener('submit', function (event) {
+                event.preventDefault(); // Prevent default form submission
+
+                const newPassword = document.getElementById('new-password').value;
+
+                if (!newPassword.trim()) {
+                    statusMessageDiv.textContent = 'Password cannot be empty.';
+                    statusMessageDiv.className = 'error-message';
+                    return;
+                }
+
+                fetch('/api/change_password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ new_password: newPassword }),
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.json().then(errorData => {
+                                throw new Error(errorData.error || 'Update failed');
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        statusMessageDiv.textContent = data.message;
+                        statusMessageDiv.className = 'success-message';
+                    })
+                    .catch(error => {
+                        statusMessageDiv.textContent = 'Error during update: ' + error.message;
+                        statusMessageDiv.className = 'error-message';
+                        console.error('Error during password update:', error);
+                    });
+            });
+        }
+
+        // Function to set hidden username for password form (accessibility)
+        function setHiddenUsername() {
+            const hiddenUsernameInput = document.getElementById('hidden-username-for-password-form');
+            if (hiddenUsernameInput && viewingProfileUsername) {
+                hiddenUsernameInput.value = viewingProfileUsername;
+            }
+        }
+
+        // Fetch current user ID on page load and then load profile
+        fetch('/api/current_user')
+            .then(response => response.json())
+            .then(data => {
+                if (data.userId) {
+                    currentUserId = data.userId;
+                }
+                loadProfilePage(); // Load profile page AFTER getting current user ID
+            })
+            .catch(error => {
+                console.error('Error fetching current user:', error);
+                loadProfilePage(); // Load profile page even if current user fetch fails (might be guest)
+            });
+
+        // Setup event handlers
+        setupProfilePicUploadHandler();
+        setupUsernameUpdateHandler();
+        setupPasswordUpdateHandler();
+
+        
+    </script>
+{% endblock %}

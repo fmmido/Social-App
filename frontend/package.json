@@ -1,0 +1,8 @@
+{
+    "name": "my-app-frontend",
+    "version": "1.0.0",
+    "scripts": {
+      "start": "python -m http.server", #adjust if you use a bundler like webpack.
+      "dev": "concurrently \"npm start\" \"cd ../backend && python app.py\"" 
+    }
+   }

@@ -1,0 +1,27 @@
+<h1>Messages</h1>
+<h2>Send a Message</h2>
+<form method="POST">
+    <input type="text" name="receiver" placeholder="Recipient's username" required>
+    <textarea name="content" placeholder="Your message" required></textarea>
+    <button type="submit">Send</button>
+</form>
+
+<h2>Received Messages</h2>
+<ul>
+    {% for message in received %}
+    <li>
+        <strong>From: {{ message[1] }}</strong> ({{ message[3] }})
+        <p>{{ message[2] }}</p>
+    </li>
+    {% endfor %}
+</ul>
+
+<h2>Sent Messages</h2>
+<ul>
+    {% for message in sent %}
+    <li>
+        <strong>To: {{ message[1] }}</strong> ({{ message[3] }})
+        <p>{{ message[2] }}</p>
+    </li>
+    {% endfor %}
+</ul>

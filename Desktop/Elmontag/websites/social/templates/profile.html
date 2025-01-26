@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Profile</h1>
+<form method="POST" enctype="multipart/form-data">
+    <label>Username:</label>
+    <input type="text" name="username" value="{{ user.username }}">
+    <label>Password:</label>
+    <input type="password" name="password" placeholder="New Password">
+    <label>Avatar:</label>
+    <input type="file" name="avatar">
+    <button type="submit">Update</button>
+</form>
+{% if user.avatar %}
+    <h2>Current Avatar:</h2>
+    <img src="{{ url_for('static', filename='avatars/' + user.avatar) }}" alt="Avatar" width="100">
+{% endif %}
+{% endblock %}

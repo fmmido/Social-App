@@ -1,0 +1,128 @@
+/* General Styles */
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+}
+
+/* Navbar */
+/* styles.css - Simplified Navbar CSS for Testing */
+.navbar {
+    background-color: #f0f0f0; /* Light gray background */
+    padding: 10px;
+    display: flex; /* Enable flexbox */
+    align-items: center; /* Vertically center items */
+    justify-content: space-between; /* Space out left and right sides */
+}
+
+.navbar-left, .navbar-right {
+    display: flex; /* Enable flexbox for left and right containers too */
+    align-items: center;
+}
+
+.nav-icon {
+    margin-right: 10px; /* Add spacing between icons */
+    font-size: 20px;
+}
+
+.nav-input-field {
+    margin-right: 5px; /* Spacing between input fields */
+    padding: 5px;
+}
+
+.nav-btn {
+    margin-left: 5px; /* Spacing for buttons */
+    padding: 8px 12px;
+}
+
+.navbar-logo {
+    width: 30px;
+    height: 30px;
+    margin-right: 20px;
+}
+
+.nav-icon {
+    margin-right: 20px;
+    color: #1DA1F2;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.nav-icon:hover {
+    color: #1991db;
+}
+
+.navbar-right {
+    display: flex;
+    align-items: center;
+}
+
+.tweet-button {
+    background-color: #1DA1F2;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.tweet-button:hover {
+    background-color: #1991db;
+}
+
+/* Main Layout */
+.container {
+    display: flex;
+    margin-top: 70px; /* Offset for fixed navbar */
+}
+
+/* Sidebar */
+.sidebar {
+    width: 200px;
+    background-color: #f4f4f4;
+    padding: 20px;
+    border-right: 1px solid #e1e8ed;
+}
+
+.sidebar h3 {
+    margin-top: 0;
+}
+
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar ul li {
+    margin-bottom: 10px;
+    cursor: pointer;
+}
+
+.sidebar ul li:hover {
+    color: #1DA1F2;
+}
+
+/* Main Content */
+.main-content {
+    flex: 1;
+    padding: 20px;
+    background-color: #fff;
+}
+
+.tweet {
+    border-bottom: 1px solid #e1e8ed;
+    padding: 10px 0;
+}
+
+.tweet:last-child {
+    border-bottom: none;
+}
+
+/* Footer */
+footer {
+    background-color: #1DA1F2;
+    color: white;
+    text-align: center;
+    padding: 10px 20px;
+    margin-top: auto; /* pushes footer to bottom */
+}

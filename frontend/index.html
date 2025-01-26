@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}Decentralized Twitter X - Timeline{% endblock %}
+
+{% block content %}
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Tweet Input Area (Hidden for guests, shown for logged-in users) -->
+        <div id="tweet-area" style="display:none;">
+            <textarea id="tweet-input" placeholder="What's happening?" rows="3"></textarea>
+            <button id="tweet-submit-button" class="tweet-button">Tweet</button>
+        </div>
+
+        <!-- Timeline of Tweets -->
+        <div id="posts-container">
+            <!-- Regular Tweets will be dynamically loaded here -->
+            <p>Loading tweets...</p>
+        </div>
+    </div>
+
+    <script>
+        const postsContainer = document.getElementById('posts-container');
+        const tweetSubmitButton = document.getElementById('tweet-submit-button');
+        const tweetAreaDiv = document.getElementById('tweet-area'); // Moved tweetAreaDiv here
+
+        // Function to update tweet area visibility based on login status
+        function updateTweetAreaVisibility(isLoggedIn) {
+            if (tweetAreaDiv) {
+                tweetAreaDiv.style.display = isLoggedIn ? 'block' : 'none';
+            }
+        }
+
+        // Function to load timeline posts (tweets)
+        function loadTimeline() {
+            fetch('/api/get_posts') // Use your existing get_posts endpoint
+            .then(response => response.json())
+            .then(posts => {
+                displayTimelinePosts(posts); // Display as regular timeline tweets
+            })
+            .catch(error => {
+                console.error('Error loading posts:', error);
+                postsContainer.innerHTML = '<p>Failed to load tweets.</p>';
+            });
+        }
+
+        // Function to display posts in the posts-container (using the new tweet layout)
+        function displayTimelinePosts(posts) {
+            postsContainer.innerHTML = ''; // Clear existing content
+            if (posts.length === 0) {
+                postsContainer.innerHTML = '<p>No tweets available.</p>';
+                return;
+            }
+            posts.forEach(post => {
+                const postDiv = document.createElement('div');
+                postDiv.classList.add('tweet'); // Add tweet class for styling
+
+                // Enhanced tweet display with profile pic and structured content - NEW HTML STRUCTURE
+                postDiv.innerHTML = `
+                    <img src="${post.profile_pic || 'https://via.placeholder.com/40'}" alt="Profile Picture" class="tweet-profile-pic">
+                    <div class="tweet-content">
+                        <div class="tweet-header">
+                            <span class="tweet-username">
+                                <a href="/profile/${post.username}">${post.username}</a> <!-- Username as a link to profile -->
+                            </span>
+                            <span class="tweet-handle">@${post.username}</span>
+                            <!-- In real app, use a proper handle/screen name -->
+                        </div>
+                        <p>${post.content}</p>
+                        <div class="tweet-footer">
+                            <span class="likes">❤️ 0</span>
+                            <span class="retweets">🔁 0</span>
+                        </div>
+                    </div>
+                `;
+                postsContainer.appendChild(postDiv);
+            });
+        }
+
+        // Tweet submission functionality
+        tweetSubmitButton.addEventListener('click', function() {
+            const tweetContent = document.getElementById('tweet-input').value;
+            if (!tweetContent.trim()) {
+                alert('Tweet content cannot be empty.');
+                return;
+            }
+
+            fetch('/api/create_post', { // Your create_post endpoint
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ content: tweetContent })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(errorData => {
+                        return Promise.reject(errorData);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Tweet created:', data);
+                alert('Tweet Created!');
+                document.getElementById('tweet-input').value = ''; // Clear input after tweet
+                loadTimeline(); // Reload timeline after tweet
+            })
+            .catch(error => {
+                console.error('Error creating tweet:', error);
+                let errorMessage = 'Failed to create tweet. Check console.';
+                if (error && error.error) {
+                    errorMessage = 'Failed to create tweet: ' + error.error;
+                }
+                alert(errorMessage);
+            });
+        });
+
+        // Check current user on page load
+        function checkCurrentUser() {
+            fetch('/api/current_user')
+            .then(response => response.json())
+            .then(data => {
+                if (data.userId) {
+                    updateTweetAreaVisibility(true); // Show tweet area for logged-in users
+                    loadTimeline(); // Load timeline posts
+                } else {
+                    updateTweetAreaVisibility(false); // Hide tweet area for guests
+                }
+            })
+            .catch(error => {
+                console.error('Error checking current user:', error);
+                updateTweetAreaVisibility(false); // Hide tweet area on error
+            });
+        }
+
+        checkCurrentUser(); // Initial check on page load
+    </script>
+{% endblock %}
